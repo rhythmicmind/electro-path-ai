@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ElectroPath AI - Electrical Conduit & Socket Layout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    header {
+      background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+      border-bottom: 1px solid var(--card-border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #fff;
+    }
+    .logo-text h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .logo-text p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .header-badges {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .badge {
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .badge-success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .badge-info { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+
+    .main-container {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      flex: 1;
+      height: calc(100vh - 73px);
+      overflow: hidden;
+    }
+
+    .canvas-pane {
+      position: relative;
+      background-color: #0b0f19;
+      background-image: 
+        radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
+      background-size: 24px 24px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .toolbar {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      z-index: 10;
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .tool-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-main);
+      padding: 0.4rem 0.65rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tool-btn:hover { background: rgba(255, 255, 255, 0.1); }
+    .tool-btn.active {
+      background: var(--accent);
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    .svg-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+      max-height: 80vh;
+      filter: drop-shadow(0 10px 25px rgba(0,0,0,0.5));
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: var(--card-bg);
+      border-left: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .sidebar-section {
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .sidebar-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .circuits-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .circuit-item {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .circuit-item:hover, .circuit-item.selected {
+      border-color: var(--accent);
+      transform: translateX(3px);
+    }
+    .circuit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.35rem;
+    }
+    .circuit-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .circuit-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* BOM Metrics */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .metric-card {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.75rem;
+    }
+    .metric-val {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+    }
+    .metric-lbl {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .node-details {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.85rem;
+      font-size: 0.8rem;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+    .detail-lbl { color: var(--text-muted); }
+    .detail-val { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+    /* SVG Elements */
+    .wall-line { stroke: #64748b; stroke-linecap: round; transition: stroke 0.2s; }
+    .wall-exterior { stroke: #94a3b8; stroke-width: 0.22; }
+    .wall-interior { stroke: #475569; stroke-width: 0.14; }
+    .opening-door { stroke: #e2e8f0; stroke-dasharray: 0.1, 0.1; stroke-width: 0.05; }
+    .conduit-line {
+      fill: none;
+      stroke-width: 0.08;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .conduit-line:hover {
+      stroke-width: 0.16;
+      filter: drop-shadow(0 0 4px currentColor);
+    }
+    .fixture-marker {
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .fixture-marker:hover {
+      transform: scale(1.3);
+    }
+    .pull-box-marker {
+      fill: #f59e0b;
+      stroke: #78350f;
+      stroke-width: 0.02;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-badge">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">
+        <h1>ElectroPath AI</h1>
+        <p>GNN & Steiner Tree Electrical Optimization Engine</p>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="badge badge-success">✓ NEC 210.52 Code Compliant</span>
+      <span class="badge badge-info">✓ Max 360° Conduit Bend Validated</span>
+      <span class="badge badge-success">✓ Voltage Drop &lt; 3%</span>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <div class="canvas-pane">
+      <div class="toolbar">
+        <button class="tool-btn active" id="btn-all" onclick="filterCircuit('ALL')">All Circuits</button>
+        <button class="tool-btn" id="toggle-conduits" onclick="toggleLayer('conduits')">Toggle Conduits</button>
+        <button class="tool-btn" id="toggle-fixtures" onclick="toggleLayer('fixtures')">Toggle Fixtures</button>
+        <button class="tool-btn" id="toggle-labels" onclick="toggleLayer('labels')">Toggle Labels</button>
+      </div>
+
+      <div class="svg-wrapper">
+        <svg viewBox="-1.2 -1.2 13.4 10.4" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="0.1" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+
+          <!-- ROOM LABELS -->
+          <g id="layer-rooms">
+            <text x="1.25" y="1.6" font-family="Inter, sans-serif" font-size="0.32" fill="#475569" font-weight="600" text-anchor="middle">ENTRY CORRIDOR</text>
+<text x="5.0" y="2.6" font-family="Inter, sans-serif" font-size="0.32" fill="#475569" font-weight="600" text-anchor="middle">LIVING & DINING ROOM</text>
+<text x="9.25" y="2.1" font-family="Inter, sans-serif" font-size="0.32" fill="#475569" font-weight="600" text-anchor="middle">GOURMET KITCHEN</text>
+<text x="4.5" y="6.6" font-family="Inter, sans-serif" font-size="0.32" fill="#475569" font-weight="600" text-anchor="middle">MASTER BEDROOM</text>
+<text x="1.25" y="3.7" font-family="Inter, sans-serif" font-size="0.32" fill="#475569" font-weight="600" text-anchor="middle">MASTER BATHROOM</text>
+          </g>
+
+          <!-- WALLS -->
+          <g id="layer-walls">
+            <line class="wall-line wall-interior" x1="0.0" y1="0.0" x2="2.5" y2="0.0" />
+<line class="wall-line wall-interior" x1="2.5" y1="0.0" x2="2.5" y2="2.0" />
+<line class="wall-line wall-interior" x1="2.5" y1="2.0" x2="0.0" y2="2.0" />
+<line class="wall-line wall-exterior" x1="0.0" y1="2.0" x2="0.0" y2="0.0" />
+<line class="opening-door" x1="0.0" y1="1.5" x2="0.0" y2="0.5" />
+<line class="wall-line wall-exterior" x1="2.5" y1="0.0" x2="7.5" y2="0.0" />
+<line x1="4.5" y1="0.0" x2="6.5" y2="0.0" stroke="#38bdf8" stroke-width="0.06" opacity="0.8"/>
+<line class="wall-line wall-exterior" x1="7.5" y1="0.0" x2="7.5" y2="4.0" />
+<line class="wall-line wall-interior" x1="7.5" y1="4.0" x2="2.5" y2="4.0" />
+<line class="wall-line wall-interior" x1="2.5" y1="4.0" x2="2.5" y2="0.0" />
+<line class="wall-line wall-exterior" x1="7.5" y1="0.0" x2="11.0" y2="0.0" />
+<line x1="8.5" y1="0.0" x2="9.7" y2="0.0" stroke="#38bdf8" stroke-width="0.06" opacity="0.8"/>
+<line class="wall-line wall-exterior" x1="11.0" y1="0.0" x2="11.0" y2="3.0" />
+<line class="wall-line wall-interior" x1="11.0" y1="3.0" x2="7.5" y2="3.0" />
+<line class="wall-line wall-interior" x1="7.5" y1="3.0" x2="7.5" y2="0.0" />
+<line class="opening-door" x1="7.5" y1="1.2" x2="7.5" y2="0.3" />
+<line class="wall-line wall-interior" x1="2.5" y1="4.0" x2="6.5" y2="4.0" />
+<line class="opening-door" x1="2.9" y1="4.0" x2="3.8" y2="4.0" />
+<line class="wall-line wall-exterior" x1="6.5" y1="4.0" x2="6.5" y2="8.0" />
+<line x1="6.5" y1="5.5" x2="6.5" y2="7.3" stroke="#38bdf8" stroke-width="0.06" opacity="0.8"/>
+<line class="wall-line wall-exterior" x1="6.5" y1="8.0" x2="2.5" y2="8.0" />
+<line class="wall-line wall-interior" x1="2.5" y1="8.0" x2="2.5" y2="4.0" />
+<line class="wall-line wall-interior" x1="0.0" y1="2.0" x2="2.5" y2="2.0" />
+<line class="opening-door" x1="0.3" y1="2.0" x2="1.1" y2="2.0" />
+<line class="wall-line wall-interior" x1="2.5" y1="2.0" x2="2.5" y2="4.2" />
+<line class="wall-line wall-interior" x1="2.5" y1="4.2" x2="0.0" y2="4.2" />
+<line class="wall-line wall-exterior" x1="0.0" y1="4.2" x2="0.0" y2="2.0" />
+          </g>
+
+          <!-- CONDUIT RUNS -->
+          <g id="layer-conduits">
+            <line class="conduit-line" data-circuit-id="CKT_01_RANGE_50A" x1="0.2" y1="0.0" x2="9.25" y2="0.0" stroke="#2563eb" />
+<line class="conduit-line" data-circuit-id="CKT_01_RANGE_50A" x1="0.2" y1="0.4" x2="0.2" y2="0.0" stroke="#2563eb" />
+<line class="conduit-line" data-circuit-id="CKT_02_DEDICATED_20A" x1="0.2" y1="0.0" x2="8.0" y2="0.0" stroke="#16a34a" />
+<line class="conduit-line" data-circuit-id="CKT_02_DEDICATED_20A" x1="0.2" y1="0.4" x2="0.2" y2="0.0" stroke="#16a34a" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="0.2" y1="0.0" x2="7.925" y2="0.0" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="0.2" y1="0.4" x2="0.2" y2="0.0" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="10.125" y1="0.0" x2="10.425" y2="0.0" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="9.25" y1="0.0" x2="10.125" y2="0.0" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="8.375" y1="0.0" x2="9.25" y2="0.0" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="7.925" y1="0.0" x2="8.375" y2="0.0" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="10.425" y1="0.75" x2="11.0" y2="0.75" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="10.425" y1="0.4" x2="10.425" y2="0.75" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="10.425" y1="0.0" x2="10.425" y2="0.4" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="11.0" y1="0.75" x2="11.0" y2="1.5" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="11.0" y1="1.5" x2="11.0" y2="2.25" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="10.125" y1="2.25" x2="10.125" y2="3.0" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="10.425" y1="2.25" x2="10.125" y2="2.25" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="11.0" y1="2.25" x2="10.425" y2="2.25" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="10.125" y1="3.0" x2="9.25" y2="3.0" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_03_WET_GFCI_20A" x1="9.25" y1="3.0" x2="8.375" y2="3.0" stroke="#dc2626" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="1.667" y1="1.9" x2="1.667" y2="2.0" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="1.25" y1="1.9" x2="1.667" y2="1.9" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="1.25" y1="0.4" x2="1.25" y2="1.9" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="0.2" y1="0.4" x2="1.25" y2="0.4" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="1.875" y1="2.0" x2="2.083" y2="2.0" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="1.667" y1="2.0" x2="1.875" y2="2.0" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="2.083" y1="2.733" x2="2.5" y2="2.733" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="2.083" y1="2.45" x2="2.083" y2="2.733" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="2.083" y1="2.0" x2="2.083" y2="2.45" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="2.5" y1="2.733" x2="2.5" y2="3.467" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="1.875" y1="3.467" x2="1.875" y2="4.2" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="2.083" y1="3.467" x2="1.875" y2="3.467" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="2.5" y1="3.467" x2="2.083" y2="3.467" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="1.667" y1="4.2" x2="1.25" y2="4.2" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="1.875" y1="4.2" x2="1.667" y2="4.2" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="2.5" y1="2.45" x2="7.5" y2="2.45" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="2.5" y1="2.733" x2="2.5" y2="2.45" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="7.5" y1="2.0" x2="7.5" y2="1.9" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_04_WET_GFCI_20A" x1="7.5" y1="2.45" x2="7.5" y2="2.0" stroke="#9333ea" />
+<line class="conduit-line" data-circuit-id="CKT_05_WET_GFCI_20A" x1="0.0" y1="0.4" x2="0.0" y2="2.733" stroke="#ea580c" />
+<line class="conduit-line" data-circuit-id="CKT_05_WET_GFCI_20A" x1="0.2" y1="0.4" x2="0.0" y2="0.4" stroke="#ea580c" />
+<line class="conduit-line" data-circuit-id="CKT_05_WET_GFCI_20A" x1="0.0" y1="2.733" x2="0.0" y2="3.467" stroke="#ea580c" />
+<line class="conduit-line" data-circuit-id="CKT_05_WET_GFCI_20A" x1="0.625" y1="3.467" x2="0.625" y2="4.2" stroke="#ea580c" />
+<line class="conduit-line" data-circuit-id="CKT_05_WET_GFCI_20A" x1="0.2" y1="3.467" x2="0.625" y2="3.467" stroke="#ea580c" />
+<line class="conduit-line" data-circuit-id="CKT_05_WET_GFCI_20A" x1="0.0" y1="3.467" x2="0.2" y2="3.467" stroke="#ea580c" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="0.2" y1="0.3" x2="0.0" y2="0.3" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="0.2" y1="0.4" x2="0.2" y2="0.3" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="0.2" y1="0.0" x2="1.25" y2="0.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="0.2" y1="0.3" x2="0.2" y2="0.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="1.25" y1="2.0" x2="1.3" y2="2.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="1.25" y1="0.4" x2="1.25" y2="2.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="1.25" y1="0.3" x2="1.25" y2="0.4" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="1.25" y1="0.0" x2="1.25" y2="0.3" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="1.25" y1="2.0" x2="1.25" y2="3.1" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="2.5" y1="4.675" x2="2.5" y2="5.333" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="1.3" y1="4.675" x2="2.5" y2="4.675" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="1.3" y1="4.0" x2="1.3" y2="4.675" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="1.3" y1="3.1" x2="1.3" y2="4.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="1.25" y1="3.1" x2="1.3" y2="3.1" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="2.5" y1="6.0" x2="2.5" y2="6.667" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="2.5" y1="5.333" x2="2.5" y2="6.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="4.0" y1="6.0" x2="4.5" y2="6.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="3.833" y1="6.0" x2="4.0" y2="6.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="2.5" y1="6.0" x2="3.833" y2="6.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="3.833" y1="6.667" x2="3.833" y2="8.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="3.833" y1="6.0" x2="3.833" y2="6.667" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="4.5" y1="8.0" x2="5.167" y2="8.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="4.0" y1="8.0" x2="4.5" y2="8.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="3.833" y1="8.0" x2="4.0" y2="8.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="4.0" y1="4.675" x2="4.0" y2="4.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="4.0" y1="5.333" x2="4.0" y2="4.675" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="4.0" y1="6.0" x2="4.0" y2="5.333" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="5.167" y1="4.0" x2="5.225" y2="4.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="4.5" y1="4.0" x2="5.167" y2="4.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="4.0" y1="4.0" x2="4.5" y2="4.0" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="5.225" y1="4.675" x2="6.5" y2="4.675" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_06_GEN_15A" x1="5.225" y1="4.0" x2="5.225" y2="4.675" stroke="#0891b2" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="0.2" y1="1.0" x2="1.25" y2="1.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="0.2" y1="0.4" x2="0.2" y2="1.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="1.25" y1="1.5" x2="1.25" y2="2.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="1.25" y1="1.075" x2="1.25" y2="1.5" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="1.25" y1="1.0" x2="1.25" y2="1.075" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="1.25" y1="1.0" x2="2.5" y2="1.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="2.5" y1="1.0" x2="2.5" y2="1.075" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="2.5" y1="0.0" x2="3.425" y2="0.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="2.5" y1="0.1" x2="2.5" y2="0.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="2.5" y1="0.4" x2="2.5" y2="0.1" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="2.5" y1="1.0" x2="2.5" y2="0.4" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="4.167" y1="2.0" x2="5.0" y2="2.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="3.425" y1="2.0" x2="4.167" y2="2.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="2.5" y1="2.0" x2="3.425" y2="2.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="2.5" y1="1.5" x2="2.5" y2="2.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="2.5" y1="1.075" x2="2.5" y2="1.5" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="4.167" y1="2.0" x2="4.167" y2="4.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="5.0" y1="4.0" x2="5.833" y2="4.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="4.167" y1="4.0" x2="5.0" y2="4.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="7.5" y1="0.0" x2="7.5" y2="0.1" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="5.833" y1="0.0" x2="7.5" y2="0.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="5.0" y1="0.0" x2="5.833" y2="0.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="4.167" y1="0.0" x2="5.0" y2="0.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="3.425" y1="0.0" x2="4.167" y2="0.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="9.25" y1="1.075" x2="9.25" y2="1.5" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="9.25" y1="1.0" x2="9.25" y2="1.075" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="7.5" y1="1.0" x2="9.25" y2="1.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="7.5" y1="0.4" x2="7.5" y2="1.0" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_07_GEN_15A" x1="7.5" y1="0.1" x2="7.5" y2="0.4" stroke="#d97706" />
+<line class="conduit-line" data-circuit-id="CKT_08_GEN_15A" x1="0.2" y1="0.0" x2="7.075" y2="0.0" stroke="#4f46e5" />
+<line class="conduit-line" data-circuit-id="CKT_08_GEN_15A" x1="0.2" y1="0.4" x2="0.2" y2="0.0" stroke="#4f46e5" />
+<line class="conduit-line" data-circuit-id="CKT_08_GEN_15A" x1="7.5" y1="0.4" x2="7.5" y2="1.333" stroke="#4f46e5" />
+<line class="conduit-line" data-circuit-id="CKT_08_GEN_15A" x1="7.075" y1="0.4" x2="7.5" y2="0.4" stroke="#4f46e5" />
+<line class="conduit-line" data-circuit-id="CKT_08_GEN_15A" x1="7.075" y1="0.0" x2="7.075" y2="0.4" stroke="#4f46e5" />
+<line class="conduit-line" data-circuit-id="CKT_08_GEN_15A" x1="7.5" y1="1.333" x2="7.5" y2="2.667" stroke="#4f46e5" />
+          </g>
+
+          <!-- PULL BOXES -->
+          <g id="layer-pullboxes">
+            <rect class="pull-box-marker" x="10.325000000000001" y="2.15" width="0.2" height="0.2" rx="0.03" />
+<rect class="pull-box-marker" x="1.983" y="2.35" width="0.2" height="0.2" rx="0.03" />
+<rect class="pull-box-marker" x="1.15" y="1.9" width="0.2" height="0.2" rx="0.03" />
+<rect class="pull-box-marker" x="1.15" y="3.0" width="0.2" height="0.2" rx="0.03" />
+<rect class="pull-box-marker" x="4.4" y="7.9" width="0.2" height="0.2" rx="0.03" />
+<rect class="pull-box-marker" x="2.4" y="-0.1" width="0.2" height="0.2" rx="0.03" />
+<rect class="pull-box-marker" x="4.9" y="3.9" width="0.2" height="0.2" rx="0.03" />
+<rect class="pull-box-marker" x="7.4" y="0.9" width="0.2" height="0.2" rx="0.03" />
+<rect class="pull-box-marker" x="6.9750000000000005" y="-0.1" width="0.2" height="0.2" rx="0.03" />
+          </g>
+
+          <!-- FIXTURES -->
+          <g id="layer-fixtures">
+            <g class="fixture-marker" data-type="main_panel" onclick="inspectNode('MDB_PANEL')"><rect x="0.020000000000000018" y="0.15000000000000002" width="0.36" height="0.5" fill="#e11d48" stroke="#fff" stroke-width="0.03" rx="0.04"/><text x="0.2" y="0.48000000000000004" font-family="Inter" font-size="0.2" fill="#fff" font-weight="bold" text-anchor="middle">MDB</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="light" onclick="inspectNode('LIGHT_001')"><circle cx="1.25" cy="1.0" r="0.20" fill="#facc15" opacity="0.85" filter="url(#glow)"/><circle cx="1.25" cy="1.0" r="0.08" fill="#ca8a04"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="duplex" onclick="inspectNode('REC_002')"><circle cx="1.25" cy="0.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="1.21" cy="0.0" r="0.03" fill="#fff"/><circle cx="1.29" cy="0.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="duplex" onclick="inspectNode('REC_003')"><circle cx="2.5" cy="1.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="2.46" cy="1.0" r="0.03" fill="#fff"/><circle cx="2.54" cy="1.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="duplex" onclick="inspectNode('REC_004')"><circle cx="1.25" cy="2.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="1.21" cy="2.0" r="0.03" fill="#fff"/><circle cx="1.29" cy="2.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="switch" onclick="inspectNode('SW_005')"><rect x="-0.09" y="0.21" width="0.18" height="0.18" fill="#10b981" stroke="#fff" stroke-width="0.02" rx="0.03"/><text x="0.0" y="0.35" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">S</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="light" onclick="inspectNode('LIGHT_006')"><circle cx="5.0" cy="2.0" r="0.20" fill="#facc15" opacity="0.85" filter="url(#glow)"/><circle cx="5.0" cy="2.0" r="0.08" fill="#ca8a04"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="duplex" onclick="inspectNode('REC_007')"><circle cx="3.425" cy="0.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="3.385" cy="0.0" r="0.03" fill="#fff"/><circle cx="3.465" cy="0.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_08_GEN_15A" data-type="duplex" onclick="inspectNode('REC_008')"><circle cx="7.075" cy="0.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="7.035" cy="0.0" r="0.03" fill="#fff"/><circle cx="7.115" cy="0.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_08_GEN_15A" data-type="duplex" onclick="inspectNode('REC_009')"><circle cx="7.5" cy="1.333" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="7.46" cy="1.333" r="0.03" fill="#fff"/><circle cx="7.54" cy="1.333" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_08_GEN_15A" data-type="duplex" onclick="inspectNode('REC_010')"><circle cx="7.5" cy="2.667" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="7.46" cy="2.667" r="0.03" fill="#fff"/><circle cx="7.54" cy="2.667" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="duplex" onclick="inspectNode('REC_011')"><circle cx="5.833" cy="4.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="5.793" cy="4.0" r="0.03" fill="#fff"/><circle cx="5.873" cy="4.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="duplex" onclick="inspectNode('REC_012')"><circle cx="4.167" cy="4.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="4.127" cy="4.0" r="0.03" fill="#fff"/><circle cx="4.207" cy="4.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="duplex" onclick="inspectNode('REC_013')"><circle cx="2.5" cy="1.075" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="2.46" cy="1.075" r="0.03" fill="#fff"/><circle cx="2.54" cy="1.075" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="light" onclick="inspectNode('LIGHT_014')"><circle cx="9.25" cy="1.5" r="0.20" fill="#facc15" opacity="0.85" filter="url(#glow)"/><circle cx="9.25" cy="1.5" r="0.08" fill="#ca8a04"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_03_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_015')"><circle cx="7.925" cy="0.0" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="7.925" y="0.05" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_03_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_016')"><circle cx="10.425" cy="0.0" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="10.425" y="0.05" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_03_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_017')"><circle cx="11.0" cy="0.75" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="11.0" y="0.8" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_03_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_018')"><circle cx="11.0" cy="1.5" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="11.0" y="1.55" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_03_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_019')"><circle cx="11.0" cy="2.25" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="11.0" y="2.3" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_03_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_020')"><circle cx="10.125" cy="3.0" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="10.125" y="3.05" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_03_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_021')"><circle cx="9.25" cy="3.0" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="9.25" y="3.05" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_03_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_022')"><circle cx="8.375" cy="3.0" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="8.375" y="3.05" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_07_GEN_15A" data-type="switch" onclick="inspectNode('SW_023')"><rect x="7.41" y="0.010000000000000009" width="0.18" height="0.18" fill="#10b981" stroke="#fff" stroke-width="0.02" rx="0.03"/><text x="7.5" y="0.15000000000000002" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">S</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_04_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_024')"><circle cx="7.5" cy="2.45" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="7.5" y="2.5" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_04_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_025')"><circle cx="7.5" cy="1.9" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="7.5" y="1.95" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_02_DEDICATED_20A" data-type="heavy" onclick="inspectNode('DEDICATED_FRIDGE_026')"><rect x="7.85" y="-0.15" width="0.30" height="0.30" fill="#dc2626" stroke="#fff" stroke-width="0.02" rx="0.04"/><text x="8.0" y="0.06" font-family="Inter" font-size="0.14" fill="#fff" font-weight="bold" text-anchor="middle">240</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_01_RANGE_50A" data-type="heavy" onclick="inspectNode('HEAVY_RANGE_027')"><rect x="9.1" y="-0.15" width="0.30" height="0.30" fill="#dc2626" stroke="#fff" stroke-width="0.02" rx="0.04"/><text x="9.25" y="0.06" font-family="Inter" font-size="0.14" fill="#fff" font-weight="bold" text-anchor="middle">240</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="light" onclick="inspectNode('LIGHT_028')"><circle cx="4.5" cy="6.0" r="0.20" fill="#facc15" opacity="0.85" filter="url(#glow)"/><circle cx="4.5" cy="6.0" r="0.08" fill="#ca8a04"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="switch" onclick="inspectNode('SW_029')"><rect x="3.91" y="3.91" width="0.18" height="0.18" fill="#10b981" stroke="#fff" stroke-width="0.02" rx="0.03"/><text x="4.0" y="4.05" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">S</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="duplex" onclick="inspectNode('REC_030')"><circle cx="5.225" cy="4.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="5.185" cy="4.0" r="0.03" fill="#fff"/><circle cx="5.265" cy="4.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="duplex" onclick="inspectNode('REC_031')"><circle cx="6.5" cy="4.675" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="6.46" cy="4.675" r="0.03" fill="#fff"/><circle cx="6.54" cy="4.675" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="duplex" onclick="inspectNode('REC_032')"><circle cx="5.167" cy="8.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="5.127" cy="8.0" r="0.03" fill="#fff"/><circle cx="5.207" cy="8.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="duplex" onclick="inspectNode('REC_033')"><circle cx="3.833" cy="8.0" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="3.793" cy="8.0" r="0.03" fill="#fff"/><circle cx="3.873" cy="8.0" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="duplex" onclick="inspectNode('REC_034')"><circle cx="2.5" cy="6.667" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="2.46" cy="6.667" r="0.03" fill="#fff"/><circle cx="2.54" cy="6.667" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="duplex" onclick="inspectNode('REC_035')"><circle cx="2.5" cy="5.333" r="0.12" fill="#3b82f6" stroke="#fff" stroke-width="0.02"/><circle cx="2.46" cy="5.333" r="0.03" fill="#fff"/><circle cx="2.54" cy="5.333" r="0.03" fill="#fff"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="light" onclick="inspectNode('LIGHT_036')"><circle cx="1.25" cy="3.1" r="0.20" fill="#facc15" opacity="0.85" filter="url(#glow)"/><circle cx="1.25" cy="3.1" r="0.08" fill="#ca8a04"/></g>
+<g class="fixture-marker" data-circuit-id="CKT_06_GEN_15A" data-type="switch" onclick="inspectNode('SW_037')"><rect x="1.21" y="1.91" width="0.18" height="0.18" fill="#10b981" stroke="#fff" stroke-width="0.02" rx="0.03"/><text x="1.3" y="2.05" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">S</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_04_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_038')"><circle cx="1.667" cy="2.0" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="1.667" y="2.05" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_04_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_039')"><circle cx="2.083" cy="2.0" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="2.083" y="2.05" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_04_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_040')"><circle cx="2.5" cy="2.733" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="2.5" y="2.783" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_04_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_041')"><circle cx="2.5" cy="3.467" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="2.5" y="3.517" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_04_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_042')"><circle cx="1.875" cy="4.2" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="1.875" y="4.25" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_04_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_043')"><circle cx="1.25" cy="4.2" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="1.25" y="4.25" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_05_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_044')"><circle cx="0.625" cy="4.2" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="0.625" y="4.25" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_05_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_045')"><circle cx="0.0" cy="3.467" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="0.0" y="3.517" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+<g class="fixture-marker" data-circuit-id="CKT_05_WET_GFCI_20A" data-type="gfci" onclick="inspectNode('GFCI_046')"><circle cx="0.0" cy="2.733" r="0.14" fill="#0284c7" stroke="#fff" stroke-width="0.02"/><text x="0.0" y="2.783" font-family="Inter" font-size="0.11" fill="#fff" font-weight="bold" text-anchor="middle">G</text></g>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Bill of Materials (BOM)</div>
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="metric-val">103.1 m</div>
+            <div class="metric-lbl">Total Conduit (20mm)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">319.6 m</div>
+            <div class="metric-lbl">Total Copper Wire</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">35</div>
+            <div class="metric-lbl">Duplex & GFCI Outlets</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">8</div>
+            <div class="metric-lbl">Breaker Circuits</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">9</div>
+            <div class="metric-lbl">Pull / Junction Boxes</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-val">3.35%</div>
+            <div class="metric-lbl">Worst-Case Voltage Drop</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">Selected Element Inspector</div>
+        <div class="node-details" id="inspector-pane">
+          <p style="color: var(--text-muted); text-align: center;">Click any fixture or conduit to inspect electrical load, wire gauge, and code specifications.</p>
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="flex: 1;">
+        <div class="sidebar-title">Branch Circuits Schedule</div>
+        <div class="circuits-list" id="circuits-container">
+          <div class="circuit-item" data-circuit-id="CKT_01_RANGE_50A" onclick="filterCircuit('CKT_01_RANGE_50A')">  <div class="circuit-header">    <span class="circuit-name"><span class="color-dot" style="background:#2563eb;"></span>CKT_01_RANGE_50A</span>    <span style="font-size:0.75rem; font-weight:700; color:#38bdf8;">50A / 240V</span>  </div>  <div class="circuit-meta">    <span>Load: 8000W</span>    <span>6 AWG Cu</span>    <span>Drop: 0.3%</span>  </div></div>
+<div class="circuit-item" data-circuit-id="CKT_02_DEDICATED_20A" onclick="filterCircuit('CKT_02_DEDICATED_20A')">  <div class="circuit-header">    <span class="circuit-name"><span class="color-dot" style="background:#16a34a;"></span>CKT_02_DEDICATED_20A</span>    <span style="font-size:0.75rem; font-weight:700; color:#38bdf8;">20A / 120V</span>  </div>  <div class="circuit-meta">    <span>Load: 1500W</span>    <span>12 AWG Cu</span>    <span>Drop: 0.9%</span>  </div></div>
+<div class="circuit-item" data-circuit-id="CKT_03_WET_GFCI_20A" onclick="filterCircuit('CKT_03_WET_GFCI_20A')">  <div class="circuit-header">    <span class="circuit-name"><span class="color-dot" style="background:#dc2626;"></span>CKT_03_WET_GFCI_20A</span>    <span style="font-size:0.75rem; font-weight:700; color:#38bdf8;">20A / 120V</span>  </div>  <div class="circuit-meta">    <span>Load: 1920W</span>    <span>12 AWG Cu</span>    <span>Drop: 2.3%</span>  </div></div>
+<div class="circuit-item" data-circuit-id="CKT_04_WET_GFCI_20A" onclick="filterCircuit('CKT_04_WET_GFCI_20A')">  <div class="circuit-header">    <span class="circuit-name"><span class="color-dot" style="background:#9333ea;"></span>CKT_04_WET_GFCI_20A</span>    <span style="font-size:0.75rem; font-weight:700; color:#38bdf8;">20A / 120V</span>  </div>  <div class="circuit-meta">    <span>Load: 1920W</span>    <span>12 AWG Cu</span>    <span>Drop: 1.8%</span>  </div></div>
+<div class="circuit-item" data-circuit-id="CKT_05_WET_GFCI_20A" onclick="filterCircuit('CKT_05_WET_GFCI_20A')">  <div class="circuit-header">    <span class="circuit-name"><span class="color-dot" style="background:#ea580c;"></span>CKT_05_WET_GFCI_20A</span>    <span style="font-size:0.75rem; font-weight:700; color:#38bdf8;">20A / 120V</span>  </div>  <div class="circuit-meta">    <span>Load: 720W</span>    <span>12 AWG Cu</span>    <span>Drop: 0.2%</span>  </div></div>
+<div class="circuit-item" data-circuit-id="CKT_06_GEN_15A" onclick="filterCircuit('CKT_06_GEN_15A')">  <div class="circuit-header">    <span class="circuit-name"><span class="color-dot" style="background:#0891b2;"></span>CKT_06_GEN_15A</span>    <span style="font-size:0.75rem; font-weight:700; color:#38bdf8;">15A / 120V</span>  </div>  <div class="circuit-meta">    <span>Load: 1425W</span>    <span>14 AWG Cu</span>    <span>Drop: 3.4%</span>  </div></div>
+<div class="circuit-item" data-circuit-id="CKT_07_GEN_15A" onclick="filterCircuit('CKT_07_GEN_15A')">  <div class="circuit-header">    <span class="circuit-name"><span class="color-dot" style="background:#d97706;"></span>CKT_07_GEN_15A</span>    <span style="font-size:0.75rem; font-weight:700; color:#38bdf8;">15A / 120V</span>  </div>  <div class="circuit-meta">    <span>Load: 1275W</span>    <span>14 AWG Cu</span>    <span>Drop: 3.0%</span>  </div></div>
+<div class="circuit-item" data-circuit-id="CKT_08_GEN_15A" onclick="filterCircuit('CKT_08_GEN_15A')">  <div class="circuit-header">    <span class="circuit-name"><span class="color-dot" style="background:#4f46e5;"></span>CKT_08_GEN_15A</span>    <span style="font-size:0.75rem; font-weight:700; color:#38bdf8;">15A / 120V</span>  </div>  <div class="circuit-meta">    <span>Load: 540W</span>    <span>14 AWG Cu</span>    <span>Drop: 0.7%</span>  </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const circuitsData = [{"id": "CKT_01_RANGE_50A", "breaker_amps": 50.0, "voltage": 240.0, "wire_awg": 6, "total_load_watts": 8000.0, "length_m": 9.45, "voltage_drop": 0.34, "color": "#2563eb"}, {"id": "CKT_02_DEDICATED_20A", "breaker_amps": 20.0, "voltage": 120.0, "wire_awg": 12, "total_load_watts": 1500.0, "length_m": 8.2, "voltage_drop": 0.89, "color": "#16a34a"}, {"id": "CKT_03_WET_GFCI_20A", "breaker_amps": 20.0, "voltage": 120.0, "wire_awg": 12, "total_load_watts": 1920.0, "length_m": 16.82, "voltage_drop": 2.33, "color": "#dc2626"}, {"id": "CKT_04_WET_GFCI_20A", "breaker_amps": 20.0, "voltage": 120.0, "wire_awg": 12, "total_load_watts": 1920.0, "length_m": 13.18, "voltage_drop": 1.83, "color": "#9333ea"}, {"id": "CKT_05_WET_GFCI_20A", "breaker_amps": 20.0, "voltage": 120.0, "wire_awg": 12, "total_load_watts": 720.0, "length_m": 4.62, "voltage_drop": 0.24, "color": "#ea580c"}, {"id": "CKT_06_GEN_15A", "breaker_amps": 15.0, "voltage": 120.0, "wire_awg": 14, "total_load_watts": 1425.0, "length_m": 20.13, "voltage_drop": 3.35, "color": "#0891b2"}, {"id": "CKT_07_GEN_15A", "breaker_amps": 15.0, "voltage": 120.0, "wire_awg": 14, "total_load_watts": 1275.0, "length_m": 20.32, "voltage_drop": 3.02, "color": "#d97706"}, {"id": "CKT_08_GEN_15A", "breaker_amps": 15.0, "voltage": 120.0, "wire_awg": 14, "total_load_watts": 540.0, "length_m": 10.37, "voltage_drop": 0.65, "color": "#4f46e5"}];
+    const nodesData = [{"id": "MDB_PANEL", "type": "main_panel", "x": 0.2, "y": 0.4, "room_id": "SYSTEM", "circuit_id": null, "load_watts": 0.0, "description": "Main Distribution Board (200A 120/240V Service Panel)"}, {"id": "LIGHT_001", "type": "ceiling_light", "x": 1.25, "y": 1.0, "room_id": "ROOM_CORR", "circuit_id": "CKT_07_GEN_15A", "load_watts": 60.0, "description": "Ceiling luminaire for Entry Corridor"}, {"id": "REC_002", "type": "duplex_15a", "x": 1.25, "y": 0.0, "room_id": "ROOM_CORR", "circuit_id": "CKT_06_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_CORR_1 in Entry Corridor"}, {"id": "REC_003", "type": "duplex_15a", "x": 2.5, "y": 1.0, "room_id": "ROOM_CORR", "circuit_id": "CKT_07_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_CORR_2 in Entry Corridor"}, {"id": "REC_004", "type": "duplex_15a", "x": 1.25, "y": 2.0, "room_id": "ROOM_CORR", "circuit_id": "CKT_07_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_CORR_3 in Entry Corridor"}, {"id": "SW_005", "type": "switch_1p", "x": 0.0, "y": 0.3, "room_id": "ROOM_CORR", "circuit_id": "CKT_06_GEN_15A", "load_watts": 15.0, "description": "Entry switch for Entry Corridor"}, {"id": "LIGHT_006", "type": "ceiling_light", "x": 5.0, "y": 2.0, "room_id": "ROOM_LIV", "circuit_id": "CKT_07_GEN_15A", "load_watts": 60.0, "description": "Ceiling luminaire for Living & Dining Room"}, {"id": "REC_007", "type": "duplex_15a", "x": 3.425, "y": 0.0, "room_id": "ROOM_LIV", "circuit_id": "CKT_07_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_LIV_1 in Living & Dining Room"}, {"id": "REC_008", "type": "duplex_15a", "x": 7.075, "y": 0.0, "room_id": "ROOM_LIV", "circuit_id": "CKT_08_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_LIV_1 in Living & Dining Room"}, {"id": "REC_009", "type": "duplex_15a", "x": 7.5, "y": 1.333, "room_id": "ROOM_LIV", "circuit_id": "CKT_08_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_LIV_2 in Living & Dining Room"}, {"id": "REC_010", "type": "duplex_15a", "x": 7.5, "y": 2.667, "room_id": "ROOM_LIV", "circuit_id": "CKT_08_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_LIV_2 in Living & Dining Room"}, {"id": "REC_011", "type": "duplex_15a", "x": 5.833, "y": 4.0, "room_id": "ROOM_LIV", "circuit_id": "CKT_07_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_LIV_3 in Living & Dining Room"}, {"id": "REC_012", "type": "duplex_15a", "x": 4.167, "y": 4.0, "room_id": "ROOM_LIV", "circuit_id": "CKT_07_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_LIV_3 in Living & Dining Room"}, {"id": "REC_013", "type": "duplex_15a", "x": 2.5, "y": 1.075, "room_id": "ROOM_LIV", "circuit_id": "CKT_07_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_LIV_4 in Living & Dining Room"}, {"id": "LIGHT_014", "type": "ceiling_light", "x": 9.25, "y": 1.5, "room_id": "ROOM_KIT", "circuit_id": "CKT_07_GEN_15A", "load_watts": 60.0, "description": "Ceiling luminaire for Gourmet Kitchen"}, {"id": "GFCI_015", "type": "gfci_20a", "x": 7.925, "y": 0.0, "room_id": "ROOM_KIT", "circuit_id": "CKT_03_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_1 in Gourmet Kitchen"}, {"id": "GFCI_016", "type": "gfci_20a", "x": 10.425, "y": 0.0, "room_id": "ROOM_KIT", "circuit_id": "CKT_03_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_1 in Gourmet Kitchen"}, {"id": "GFCI_017", "type": "gfci_20a", "x": 11.0, "y": 0.75, "room_id": "ROOM_KIT", "circuit_id": "CKT_03_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_2 in Gourmet Kitchen"}, {"id": "GFCI_018", "type": "gfci_20a", "x": 11.0, "y": 1.5, "room_id": "ROOM_KIT", "circuit_id": "CKT_03_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_2 in Gourmet Kitchen"}, {"id": "GFCI_019", "type": "gfci_20a", "x": 11.0, "y": 2.25, "room_id": "ROOM_KIT", "circuit_id": "CKT_03_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_2 in Gourmet Kitchen"}, {"id": "GFCI_020", "type": "gfci_20a", "x": 10.125, "y": 3.0, "room_id": "ROOM_KIT", "circuit_id": "CKT_03_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_3 in Gourmet Kitchen"}, {"id": "GFCI_021", "type": "gfci_20a", "x": 9.25, "y": 3.0, "room_id": "ROOM_KIT", "circuit_id": "CKT_03_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_3 in Gourmet Kitchen"}, {"id": "GFCI_022", "type": "gfci_20a", "x": 8.375, "y": 3.0, "room_id": "ROOM_KIT", "circuit_id": "CKT_03_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_3 in Gourmet Kitchen"}, {"id": "SW_023", "type": "switch_1p", "x": 7.5, "y": 0.1, "room_id": "ROOM_KIT", "circuit_id": "CKT_07_GEN_15A", "load_watts": 15.0, "description": "Entry switch for Gourmet Kitchen"}, {"id": "GFCI_024", "type": "gfci_20a", "x": 7.5, "y": 2.45, "room_id": "ROOM_KIT", "circuit_id": "CKT_04_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_4 in Gourmet Kitchen"}, {"id": "GFCI_025", "type": "gfci_20a", "x": 7.5, "y": 1.9, "room_id": "ROOM_KIT", "circuit_id": "CKT_04_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_KIT_4 in Gourmet Kitchen"}, {"id": "DEDICATED_FRIDGE_026", "type": "dedicated_20a", "x": 8.0, "y": 0.0, "room_id": "ROOM_KIT", "circuit_id": "CKT_02_DEDICATED_20A", "load_watts": 1500.0, "description": "Dedicated 20A circuit for Refrigerator"}, {"id": "HEAVY_RANGE_027", "type": "heavy_duty_240v", "x": 9.25, "y": 0.0, "room_id": "ROOM_KIT", "circuit_id": "CKT_01_RANGE_50A", "load_watts": 8000.0, "description": "Dedicated 240V 50A circuit for Electric Range / Cooktop"}, {"id": "LIGHT_028", "type": "ceiling_light", "x": 4.5, "y": 6.0, "room_id": "ROOM_BED", "circuit_id": "CKT_06_GEN_15A", "load_watts": 60.0, "description": "Ceiling luminaire for Master Bedroom"}, {"id": "SW_029", "type": "switch_1p", "x": 4.0, "y": 4.0, "room_id": "ROOM_BED", "circuit_id": "CKT_06_GEN_15A", "load_watts": 15.0, "description": "Entry switch for Master Bedroom"}, {"id": "REC_030", "type": "duplex_15a", "x": 5.225, "y": 4.0, "room_id": "ROOM_BED", "circuit_id": "CKT_06_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_BED_1 in Master Bedroom"}, {"id": "REC_031", "type": "duplex_15a", "x": 6.5, "y": 4.675, "room_id": "ROOM_BED", "circuit_id": "CKT_06_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_BED_2 in Master Bedroom"}, {"id": "REC_032", "type": "duplex_15a", "x": 5.167, "y": 8.0, "room_id": "ROOM_BED", "circuit_id": "CKT_06_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_BED_3 in Master Bedroom"}, {"id": "REC_033", "type": "duplex_15a", "x": 3.833, "y": 8.0, "room_id": "ROOM_BED", "circuit_id": "CKT_06_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_BED_3 in Master Bedroom"}, {"id": "REC_034", "type": "duplex_15a", "x": 2.5, "y": 6.667, "room_id": "ROOM_BED", "circuit_id": "CKT_06_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_BED_4 in Master Bedroom"}, {"id": "REC_035", "type": "duplex_15a", "x": 2.5, "y": 5.333, "room_id": "ROOM_BED", "circuit_id": "CKT_06_GEN_15A", "load_watts": 180.0, "description": "DUPLEX_15A on wall W_BED_4 in Master Bedroom"}, {"id": "LIGHT_036", "type": "ceiling_light", "x": 1.25, "y": 3.1, "room_id": "ROOM_BATH", "circuit_id": "CKT_06_GEN_15A", "load_watts": 60.0, "description": "Ceiling luminaire for Master Bathroom"}, {"id": "SW_037", "type": "switch_1p", "x": 1.3, "y": 2.0, "room_id": "ROOM_BATH", "circuit_id": "CKT_06_GEN_15A", "load_watts": 15.0, "description": "Entry switch for Master Bathroom"}, {"id": "GFCI_038", "type": "gfci_20a", "x": 1.667, "y": 2.0, "room_id": "ROOM_BATH", "circuit_id": "CKT_04_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_BATH_1 in Master Bathroom"}, {"id": "GFCI_039", "type": "gfci_20a", "x": 2.083, "y": 2.0, "room_id": "ROOM_BATH", "circuit_id": "CKT_04_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_BATH_1 in Master Bathroom"}, {"id": "GFCI_040", "type": "gfci_20a", "x": 2.5, "y": 2.733, "room_id": "ROOM_BATH", "circuit_id": "CKT_04_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_BATH_2 in Master Bathroom"}, {"id": "GFCI_041", "type": "gfci_20a", "x": 2.5, "y": 3.467, "room_id": "ROOM_BATH", "circuit_id": "CKT_04_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_BATH_2 in Master Bathroom"}, {"id": "GFCI_042", "type": "gfci_20a", "x": 1.875, "y": 4.2, "room_id": "ROOM_BATH", "circuit_id": "CKT_04_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_BATH_3 in Master Bathroom"}, {"id": "GFCI_043", "type": "gfci_20a", "x": 1.25, "y": 4.2, "room_id": "ROOM_BATH", "circuit_id": "CKT_04_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_BATH_3 in Master Bathroom"}, {"id": "GFCI_044", "type": "gfci_20a", "x": 0.625, "y": 4.2, "room_id": "ROOM_BATH", "circuit_id": "CKT_05_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_BATH_3 in Master Bathroom"}, {"id": "GFCI_045", "type": "gfci_20a", "x": 0.0, "y": 3.467, "room_id": "ROOM_BATH", "circuit_id": "CKT_05_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_BATH_4 in Master Bathroom"}, {"id": "GFCI_046", "type": "gfci_20a", "x": 0.0, "y": 2.733, "room_id": "ROOM_BATH", "circuit_id": "CKT_05_WET_GFCI_20A", "load_watts": 240.0, "description": "GFCI_20A on wall W_BATH_4 in Master Bathroom"}];
+
+    let selectedCircuitId = 'ALL';
+    let layersVisibility = {
+      conduits: true,
+      fixtures: true,
+      labels: true
+    };
+
+    function filterCircuit(cktId) {
+      selectedCircuitId = cktId;
+      document.querySelectorAll('.circuit-item').forEach(el => {
+        el.classList.toggle('selected', el.dataset.circuitId === cktId);
+      });
+
+      const conduitEls = document.querySelectorAll('.conduit-line');
+      conduitEls.forEach(el => {
+        if (cktId === 'ALL' || el.dataset.circuitId === cktId) {
+          el.style.opacity = '1';
+          el.style.strokeWidth = (el.dataset.circuitId === cktId) ? '0.14' : '0.08';
+        } else {
+          el.style.opacity = '0.12';
+          el.style.strokeWidth = '0.04';
+        }
+      });
+
+      const fixtureEls = document.querySelectorAll('.fixture-marker');
+      fixtureEls.forEach(el => {
+        if (cktId === 'ALL' || el.dataset.circuitId === cktId || el.dataset.type === 'main_panel') {
+          el.style.opacity = '1';
+        } else {
+          el.style.opacity = '0.18';
+        }
+      });
+    }
+
+    function inspectNode(nodeId) {
+      const node = nodesData.find(n => n.id === nodeId);
+      if (!node) return;
+      const pane = document.getElementById('inspector-pane');
+      pane.innerHTML = `
+        <div class="detail-row"><span class="detail-lbl">Fixture ID</span><span class="detail-val">${node.id}</span></div>
+        <div class="detail-row"><span class="detail-lbl">Type</span><span class="detail-val">${node.type}</span></div>
+        <div class="detail-row"><span class="detail-lbl">Room</span><span class="detail-val">${node.room_id}</span></div>
+        <div class="detail-row"><span class="detail-lbl">Circuit</span><span class="detail-val" style="color:var(--accent);">${node.circuit_id || 'MDB'}</span></div>
+        <div class="detail-row"><span class="detail-lbl">Design Load</span><span class="detail-val">${node.load_watts} W</span></div>
+        <div class="detail-row"><span class="detail-lbl">Coordinates</span><span class="detail-val">(${node.x.toFixed(2)}m, ${node.y.toFixed(2)}m)</span></div>
+        <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #38bdf8;">${node.description}</div>
+      `;
+      if (node.circuit_id) filterCircuit(node.circuit_id);
+    }
+
+    function toggleLayer(layerName) {
+      layersVisibility[layerName] = !layersVisibility[layerName];
+      const g = document.getElementById('layer-' + layerName);
+      if (g) g.style.display = layersVisibility[layerName] ? '' : 'none';
+      const btn = document.getElementById('toggle-' + layerName);
+      if (btn) btn.classList.toggle('active', layersVisibility[layerName]);
+    }
+  </script>
+</body>
+</html>
